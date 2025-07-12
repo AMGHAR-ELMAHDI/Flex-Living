@@ -2,9 +2,15 @@ import { HostawayApiResponse, NormalizedReview } from "@/types/reviews";
 import { mockHostawayReviews, normalizeHostawayReviews } from "@/lib/mockData";
 
 const HOSTAWAY_API_BASE = "https://api.hostaway.com/v1";
-const ACCOUNT_ID = "61148";
-const API_KEY =
-  "f94377ebbbb479490bb3ec364649168dc443dda2e4830facaf5de2e74ccc9152";
+// Get API credentials from environment variables
+const ACCOUNT_ID = process.env.HOSTAWAY_ACCOUNT_ID;
+const API_KEY = process.env.HOSTAWAY_API_KEY;
+
+// Throw errors if credentials don't exist
+if (!ACCOUNT_ID)
+  throw new Error("HOSTAWAY_ACCOUNT_ID not found in environment variables");
+if (!API_KEY)
+  throw new Error("HOSTAWAY_API_KEY not found in environment variables");
 
 export class HostawayService {
   private static async makeRequest(endpoint: string): Promise<any> {

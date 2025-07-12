@@ -1,16 +1,9 @@
 import Link from "next/link";
-import {
-  BarChart3,
-  Building2,
-  Star,
-  Users,
-  Eye,
-  ArrowRight,
-} from "lucide-react";
+import { BarChart3, Building2, Star, Users, ArrowRight } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 text-black">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">

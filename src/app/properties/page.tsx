@@ -14,7 +14,7 @@ const mockProperties = [
     name: "2B N1 A - 29 Shoreditch Heights",
     address: "29 Shoreditch High Street, London E1 6PN",
     image:
-      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&auto=format&fit=crop",
     maxGuests: 4,
     bedrooms: 2,
     pricePerNight: 180,
@@ -24,7 +24,7 @@ const mockProperties = [
     name: "1B S2 B - 15 Canary Wharf Luxury",
     address: "15 South Quay, London E14 9SH",
     image:
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&auto=format&fit=crop",
     maxGuests: 2,
     bedrooms: 1,
     pricePerNight: 220,
@@ -34,7 +34,7 @@ const mockProperties = [
     name: "3B W1 C - 42 Notting Hill Garden",
     address: "42 Ladbroke Grove, London W11 2PB",
     image:
-      "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&h=300&auto=format&fit=crop",
     maxGuests: 6,
     bedrooms: 3,
     pricePerNight: 320,
@@ -44,7 +44,7 @@ const mockProperties = [
     name: "2B EC1 D - 8 City Financial District",
     address: "8 Moorgate, London EC2R 6EA",
     image:
-      "https://images.unsplash.com/photo-1515263487990-61b07816b924?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&auto=format&fit=crop",
     maxGuests: 4,
     bedrooms: 2,
     pricePerNight: 280,
@@ -54,7 +54,7 @@ const mockProperties = [
     name: "1B E2 E - 23 Brick Lane Modern",
     address: "23 Brick Lane, London E1 6QL",
     image:
-      "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&h=300&fit=crop",
+      "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=400&h=300&auto=format&fit=crop",
     maxGuests: 2,
     bedrooms: 1,
     pricePerNight: 150,
@@ -104,7 +104,7 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-black">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
