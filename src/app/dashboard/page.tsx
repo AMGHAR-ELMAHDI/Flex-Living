@@ -348,7 +348,7 @@ export default function ManagerDashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Total Reviews</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {analytics.totalReviews}
+                    {allReviews.length}
                   </p>
                 </div>
                 <Users className="w-8 h-8 text-blue-600" />
@@ -361,10 +361,20 @@ export default function ManagerDashboard() {
                   <p className="text-sm text-gray-600">Average Rating</p>
                   <div className="flex items-center gap-2">
                     <p className="text-2xl font-bold text-gray-900">
-                      {analytics.averageRating}
+                      {allReviews.length > 0
+                        ? (
+                            allReviews.reduce((sum, r) => sum + r.rating, 0) /
+                            allReviews.length
+                          ).toFixed(1)
+                        : "0.0"}
                     </p>
                     <StarRating
-                      rating={analytics.averageRating}
+                      rating={
+                        allReviews.length > 0
+                          ? allReviews.reduce((sum, r) => sum + r.rating, 0) /
+                            allReviews.length
+                          : 0
+                      }
                       size="sm"
                       showNumber={false}
                     />
@@ -379,7 +389,7 @@ export default function ManagerDashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Approved Reviews</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {reviews.filter((r) => r.isApproved).length}
+                    {allReviews.filter((r) => r.isApproved).length}
                   </p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -391,7 +401,10 @@ export default function ManagerDashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Public Reviews</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {reviews.filter((r) => r.isPublic).length}
+                    {
+                      allReviews.filter((r) => r.isPublic && r.isApproved)
+                        .length
+                    }
                   </p>
                 </div>
                 <Eye className="w-8 h-8 text-blue-600" />

@@ -49,11 +49,21 @@ export default function PropertiesPage() {
   const fetchReviews = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/reviews/hostaway");
+      // Fetch from manage endpoint to get updated review states
+      const response = await fetch("/api/reviews/manage");
       const data = await response.json();
 
       if (data.success) {
-        setReviews(data.data.reviews);
+        // Handle different response structures
+        let reviewsList = [];
+        if (data.reviews) {
+          reviewsList = data.reviews;
+        } else if (data.data && Array.isArray(data.data)) {
+          reviewsList = data.data;
+        } else if (data.data && data.data.reviews) {
+          reviewsList = data.data.reviews;
+        }
+        setReviews(reviewsList);
       }
     } catch (error) {
       console.error("Failed to fetch reviews:", error);
