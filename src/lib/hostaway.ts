@@ -1,23 +1,15 @@
 import { HostawayApiResponse, NormalizedReview } from "@/types/reviews";
 import { mockHostawayReviews, normalizeHostawayReviews } from "@/lib/mockData";
+import { env } from "@/lib/env";
 
 const HOSTAWAY_API_BASE = "https://api.hostaway.com/v1";
-// Get API credentials from environment variables
-const ACCOUNT_ID = process.env.HOSTAWAY_ACCOUNT_ID;
-const API_KEY = process.env.HOSTAWAY_API_KEY;
-
-// Throw errors if credentials don't exist
-if (!ACCOUNT_ID)
-  throw new Error("HOSTAWAY_ACCOUNT_ID not found in environment variables");
-if (!API_KEY)
-  throw new Error("HOSTAWAY_API_KEY not found in environment variables");
 
 export class HostawayService {
-  private static async makeRequest(endpoint: string): Promise<any> {
+  private static async makeRequest(endpoint: string): Promise<HostawayApiResponse> {
     try {
       const response = await fetch(`${HOSTAWAY_API_BASE}${endpoint}`, {
         headers: {
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${env.HOSTAWAY_API_KEY}`,
           "Content-Type": "application/json",
         },
       });
@@ -42,8 +34,8 @@ export class HostawayService {
   static async getReviews(): Promise<NormalizedReview[]> {
     try {
       // Try to fetch from actual API first
-      const response: HostawayApiResponse = await this.makeRequest(
-        `/reviews?accountId=${ACCOUNT_ID}`
+      const response = await this.makeRequest(
+        `/reviews?accountId=${env.HOSTAWAY_ACCOUNT_ID}`
       );
 
       if (response.status === "success" && response.result.length > 0) {

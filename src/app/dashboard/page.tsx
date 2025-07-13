@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { NormalizedReview, ReviewAnalytics } from "@/types/reviews";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StarRating } from "@/components/ui/StarRating";
@@ -27,11 +27,7 @@ export default function ManagerDashboard() {
   const [showGoogleImport, setShowGoogleImport] = useState(false);
   const [googleImportLoading, setGoogleImportLoading] = useState(false);
 
-  useEffect(() => {
-    fetchReviews();
-  }, [selectedProperty, selectedRating, selectedStatus]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -118,7 +114,7 @@ export default function ManagerDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedProperty, selectedRating, selectedStatus]);
 
   const handleApprove = async (reviewId: string) => {
     try {
@@ -286,31 +282,31 @@ export default function ManagerDashboard() {
   // Generate unique properties from all reviews (not just filtered ones)
   const [allReviews, setAllReviews] = useState<NormalizedReview[]>([]);
 
-  useEffect(() => {
+  const fetchAllReviews = useCallback(async () => {
     // Fetch all reviews for dropdown options
-    const fetchAllReviews = async () => {
-      try {
-        const response = await fetch("/api/reviews/manage");
-        const data = await response.json();
+    const response = await fetch("/api/reviews/manage");
+    const data = await response.json();
 
-        if (data.success) {
-          let reviewsList = [];
-          if (data.reviews) {
-            reviewsList = data.reviews;
-          } else if (data.data && Array.isArray(data.data)) {
-            reviewsList = data.data;
-          } else if (data.data && data.data.reviews) {
-            reviewsList = data.data.reviews;
-          }
-          setAllReviews(reviewsList);
-        }
-      } catch (error) {
-        console.error("Failed to fetch all reviews for filters:", error);
+    if (data.success) {
+      let reviewsList = [];
+      if (data.reviews) {
+        reviewsList = data.reviews;
+      } else if (data.data && Array.isArray(data.data)) {
+        reviewsList = data.data;
+      } else if (data.data && data.data.reviews) {
+        reviewsList = data.data.reviews;
       }
-    };
-
-    fetchAllReviews();
+      setAllReviews(reviewsList);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
+
+  useEffect(() => {
+    fetchAllReviews();
+  }, [fetchAllReviews]);
 
   const uniqueProperties = Array.from(
     new Set(allReviews.map((r) => r.propertyName).filter(Boolean))

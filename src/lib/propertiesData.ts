@@ -9,10 +9,11 @@ import {
   ShowerHead,
   Cigarette,
 } from "lucide-react";
+import { LucideIcon } from "lucide-react";
 
 // Property type definitions
 export interface PropertyAmenity {
-  icon: any;
+  icon: LucideIcon;
   name: string;
   category: string;
 }
