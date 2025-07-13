@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Search,
   MapPin,
@@ -9,11 +10,9 @@ import {
   ExternalLink,
   Loader2,
   Building,
-  Phone,
   Clock,
   DollarSign,
   Users,
-  Image as ImageIcon,
   Plus,
   Check,
 } from "lucide-react";
@@ -257,7 +256,8 @@ export default function PlacesSearchPage() {
                 </h2>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-600">
-                    Found {results.total} places for "{results.query}"
+                    Found {results.total} places for &ldquo;{results.query}
+                    &rdquo;
                   </span>
                   {selectedPlaces.size > 0 && (
                     <Badge variant="default">
@@ -280,10 +280,11 @@ export default function PlacesSearchPage() {
                     {/* Place Image */}
                     {place.photos && place.photos.length > 0 && (
                       <div className="relative h-48 bg-gray-100 rounded-t-lg overflow-hidden">
-                        <img
+                        <Image
                           src={getPhotoUrl(place.photos[0].reference, 400)}
                           alt={place.name}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
                           onError={(e) => {
                             e.currentTarget.style.display = "none";
                           }}

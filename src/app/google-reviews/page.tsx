@@ -5,13 +5,13 @@ import { NormalizedReview } from "@/types/reviews";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { Badge } from "@/components/ui/Badge";
 import { googleReviewsFindings } from "@/lib/googleReviews";
+import toast from "react-hot-toast";
 import {
   Search,
   MapPin,
   Star,
   AlertCircle,
   CheckCircle,
-  ExternalLink,
   Loader2,
   Info,
 } from "lucide-react";
@@ -45,12 +45,13 @@ export default function GoogleReviewsPage() {
     } catch (error) {
       setApiStatus("unavailable");
       setError("Failed to check API availability");
+      console.error("API availability check failed:", error);
     }
   };
 
   const handleSearch = async () => {
     if (!propertyName.trim()) {
-      setError("Please enter a property name");
+      toast.error("Please enter a property name");
       return;
     }
 
@@ -58,32 +59,46 @@ export default function GoogleReviewsPage() {
     setError(null);
     setReviews([]);
 
-    try {
-      const params = new URLSearchParams({
-        property: propertyName,
-        ...(propertyAddress && { address: propertyAddress }),
-      });
+    const searchPromise = new Promise(async (resolve, reject) => {
+      try {
+        const params = new URLSearchParams({
+          property: propertyName,
+          ...(propertyAddress && { address: propertyAddress }),
+        });
 
-      const response = await fetch(`/api/reviews/google?${params}`);
-      const data = await response.json();
+        const response = await fetch(`/api/reviews/google?${params}`);
+        const data = await response.json();
 
-      if (data.success) {
-        setReviews(data.data.reviews);
-        if (data.data.reviews.length === 0) {
-          setError(
-            "No reviews found for this property. Try adjusting the property name or address."
-          );
+        if (data.success) {
+          setReviews(data.data.reviews);
+          if (data.data.reviews.length === 0) {
+            reject(
+              new Error(
+                "No reviews found for this property. Try adjusting the property name or address."
+              )
+            );
+          } else {
+            resolve(`Found ${data.data.reviews.length} reviews!`);
+          }
+        } else {
+          reject(new Error(data.message || "Failed to fetch Google reviews"));
         }
-      } else {
-        setError(data.message || "Failed to fetch Google reviews");
+      } catch (error) {
+        reject(
+          new Error(
+            "Failed to fetch Google reviews. Please check your internet connection."
+          )
+        );
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      setError(
-        "Failed to fetch Google reviews. Please check your internet connection."
-      );
-    } finally {
-      setLoading(false);
-    }
+    });
+
+    toast.promise(searchPromise, {
+      loading: "Searching for reviews...",
+      success: (message) => message as string,
+      error: (err) => err.message,
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -165,8 +180,8 @@ export default function GoogleReviewsPage() {
                   <li>Includes reviewer name, rating, comment, and date</li>
                   <li>Works best with exact property names or addresses</li>
                   <li>
-                    Reviews are automatically marked as approved (since they're
-                    already public)
+                    Reviews are automatically marked as approved (since
+                    they&apos;re already public)
                   </li>
                 </ul>
               </div>

@@ -3,7 +3,6 @@ import { StarRating } from "./StarRating";
 import {
   formatDate,
   getRelativeTime,
-  getRatingBadgeColor,
   truncateText,
 } from "@/lib/utils";
 import { cn } from "@/lib/utils";

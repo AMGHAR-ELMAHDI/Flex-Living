@@ -69,11 +69,11 @@ Create a `.env.local` file in the root directory:
 
 ```env
 # Hostaway API Configuration
-HOSTAWAY_API_KEY=f94377ebbbb479490bb3ec364649168dc443dda2e4830facaf5de2e74ccc9152
-HOSTAWAY_ACCOUNT_ID=61148
+HOSTAWAY_API_KEY=f94377ebbbb479490bb3ecjhgjgjhjkhkjhjkfdfd
+HOSTAWAY_ACCOUNT_ID=6114433
 
 # Google Places API Configuration (Required for Places features)
-GOOGLE_PLACES_API_KEY=AIzaSyDg8vivvEluPVSnoBO8OyC51H9BIcEYnD0
+GOOGLE_PLACES_API_KEY=AIzaSyDg8vdushhdajkhdjkshjdshajdhjas
 ```
 
 ### 3. Run Development Server

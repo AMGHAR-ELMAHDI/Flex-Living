@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { NormalizedReview } from "@/types/reviews";
 import { StarRating } from "@/components/ui/StarRating";
 import { Badge } from "@/components/ui/Badge";
@@ -86,7 +87,7 @@ export default function PropertiesPage() {
           reviewCount: place.reviewCount,
           photos:
             place.photos?.map(
-              (photo: any) =>
+              (photo: { reference: string }) =>
                 `/api/places/photo?reference=${photo.reference}&maxwidth=300`
             ) || [],
           types: place.types,
@@ -237,11 +238,13 @@ export default function PropertiesPage() {
               >
                 {/* Property Image */}
                 <div className="aspect-w-16 aspect-h-10 relative">
-                  <img
+                  <Image
                     src={
                       property.googlePlace?.photos?.[0] || property.images[0]
                     }
                     alt={property.name}
+                    width={400}
+                    height={300}
                     className="w-full h-48 object-cover"
                   />
                   {/* Google Places indicator */}

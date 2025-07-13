@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  Building2,
-  BarChart3,
-  Settings,
-  User,
-  Star,
-  MapPin,
-} from "lucide-react";
+import { Building2, BarChart3, Star, MapPin } from "lucide-react";
 
 export function Navigation() {
   return (

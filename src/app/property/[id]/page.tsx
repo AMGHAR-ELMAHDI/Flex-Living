@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { NormalizedReview } from "@/types/reviews";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { getPropertyById, Property } from "@/lib/propertiesData";
@@ -14,9 +15,7 @@ import {
 } from "lucide-react";
 
 interface PropertyPageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 }
 
 export default function PropertyPage({ params }: PropertyPageProps) {
@@ -28,26 +27,54 @@ export default function PropertyPage({ params }: PropertyPageProps) {
   const [property, setProperty] = useState<Property | null>(null);
 
   useEffect(() => {
-    // Get property data from centralized source
-    const propertyData = getPropertyById(params.id);
-    setProperty(propertyData || null);
+    const initializeProperty = async () => {
+      try {
+        const resolvedParams = await params;
+        // Get property data from centralized source
+        const propertyData = getPropertyById(resolvedParams.id);
+        setProperty(propertyData || null);
 
-    fetchPublicReviews();
-  }, [params.id]);
+        fetchPublicReviews(resolvedParams.id);
+      } catch (error) {
+        console.error("Failed to resolve params:", error);
+      }
+    };
 
-  const fetchPublicReviews = async () => {
+    initializeProperty();
+  }, [params]);
+
+  const fetchPublicReviews = async (propertyId?: string) => {
     try {
       setLoading(true);
       const response = await fetch("/api/reviews/manage");
       const data = await response.json();
 
       if (data.success) {
-        const propertyReviews = data.data.filter(
+        // Get the property ID from parameter or resolved params
+        let targetPropertyId = propertyId;
+        if (!targetPropertyId) {
+          const resolvedParams = await params;
+          targetPropertyId = resolvedParams.id;
+        }
+
+        // Handle different response structures
+        let reviewsList = [];
+        if (data.reviews) {
+          reviewsList = data.reviews;
+        } else if (data.data && Array.isArray(data.data)) {
+          reviewsList = data.data;
+        } else if (data.data && data.data.reviews) {
+          reviewsList = data.data.reviews;
+        }
+
+        // Filter for this specific property and only public approved reviews
+        const propertyReviews = reviewsList.filter(
           (review: NormalizedReview) =>
-            review.propertyId === params.id &&
-            review.isPublic &&
-            review.isApproved
+            review.propertyId === targetPropertyId &&
+            review.isPublic === true &&
+            review.isApproved === true
         );
+
         setReviews(propertyReviews);
       }
     } catch (error) {
@@ -80,11 +107,13 @@ export default function PropertyPage({ params }: PropertyPageProps) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full lg:h-[60vh]">
             {/* Main Image */}
             <div className="col-span-1">
-              <div className="h-80 lg:h-full rounded-lg overflow-hidden">
-                <img
+              <div className="h-80 lg:h-full rounded-lg overflow-hidden relative">
+                <Image
                   src={property.images[selectedImage]}
                   alt={property.name}
-                  className="w-full h-full object-cover rounded-lg"
+                  fill
+                  className="object-cover rounded-lg"
+                  priority
                 />
               </div>
             </div>
@@ -95,27 +124,29 @@ export default function PropertyPage({ params }: PropertyPageProps) {
                 <button
                   key={index + 1}
                   onClick={() => setSelectedImage(index + 1)}
-                  className={`rounded-lg overflow-hidden border-2 h-full ${
+                  className={`rounded-lg overflow-hidden border-2 h-full relative ${
                     selectedImage === index + 1
                       ? "border-blue-600"
                       : "border-transparent"
                   }`}
                 >
-                  <img
+                  <Image
                     src={image}
                     alt={`${property.name} ${index + 2}`}
-                    className="w-full h-full object-cover rounded-lg"
+                    fill
+                    className="object-cover rounded-lg"
                   />
                 </button>
               ))}
               {property.images.length > 5 && (
                 <div className="rounded-lg bg-gray-900 bg-opacity-80 flex items-center justify-center cursor-pointer relative h-full">
-                  <img
+                  <Image
                     src={property.images[4]}
                     alt="More images"
-                    className="w-full h-full object-cover rounded-lg absolute inset-0 cursor-pointer"
+                    fill
+                    className="object-cover rounded-lg"
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center z-10">
                     <span className="text-white font-medium text-xs lg:text-sm">
                       View all
                     </span>

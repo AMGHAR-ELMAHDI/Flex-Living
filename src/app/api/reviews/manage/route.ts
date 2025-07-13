@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchHostawayReviews } from "@/lib/hostaway";
 
 // In a real application, you would store this in a database
-let reviewApprovals: Record<
+const reviewApprovals: Record<
   string,
   { isApproved: boolean; isPublic: boolean }
 > = {};
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const reviews = await fetchHostawayReviews();
 

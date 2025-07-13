@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { NormalizedReview, ReviewAnalytics } from "@/types/reviews";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StarRating } from "@/components/ui/StarRating";
+import toast from "react-hot-toast";
 import {
   Filter,
   Search,
@@ -43,16 +44,59 @@ export default function ManagerDashboard() {
       const data = await response.json();
 
       if (data.success) {
-        setReviews(data.reviews || data.data || []);
-        // Generate analytics from the reviews if not provided
+        // Handle different response structures
+        let reviewsList = [];
+        if (data.reviews) {
+          reviewsList = data.reviews;
+        } else if (data.data && Array.isArray(data.data)) {
+          reviewsList = data.data;
+        } else if (data.data && data.data.reviews) {
+          reviewsList = data.data.reviews;
+        }
+
+        // Apply client-side filtering since API might not support all filters
+        let filteredReviews = reviewsList;
+
+        // Filter by property
+        if (selectedProperty) {
+          filteredReviews = filteredReviews.filter(
+            (review: NormalizedReview) =>
+              review.propertyName === selectedProperty
+          );
+        }
+
+        // Filter by rating
+        if (selectedRating) {
+          const minRating = parseInt(selectedRating);
+          filteredReviews = filteredReviews.filter(
+            (review: NormalizedReview) => review.rating >= minRating
+          );
+        }
+
+        // Filter by status
+        if (selectedStatus) {
+          if (selectedStatus === "approved") {
+            filteredReviews = filteredReviews.filter(
+              (review: NormalizedReview) => review.isApproved === true
+            );
+          } else if (selectedStatus === "pending") {
+            filteredReviews = filteredReviews.filter(
+              (review: NormalizedReview) =>
+                review.isApproved === false || review.isApproved === undefined
+            );
+          }
+        }
+
+        setReviews(filteredReviews);
+
+        // Generate analytics from filtered reviews
         if (data.analytics) {
           setAnalytics(data.analytics);
         } else {
-          const reviewsList = data.reviews || data.data || [];
-          const totalReviews = reviewsList.length;
+          const totalReviews = filteredReviews.length;
           const averageRating =
             totalReviews > 0
-              ? reviewsList.reduce(
+              ? filteredReviews.reduce(
                   (sum: number, r: NormalizedReview) => sum + r.rating,
                   0
                 ) / totalReviews
@@ -92,13 +136,14 @@ export default function ManagerDashboard() {
             review.id === reviewId ? { ...review, isApproved: true } : review
           )
         );
+        toast.success("Review approved successfully!");
       } else {
         console.error("Failed to approve review:", data.error);
-        alert("Failed to approve review. Please try again.");
+        toast.error("Failed to approve review. Please try again.");
       }
     } catch (error) {
       console.error("Failed to approve review:", error);
-      alert("Failed to approve review. Please try again.");
+      toast.error("Failed to approve review. Please try again.");
     }
   };
 
@@ -118,13 +163,14 @@ export default function ManagerDashboard() {
             review.id === reviewId ? { ...review, isApproved: false } : review
           )
         );
+        toast.success("Review rejected successfully!");
       } else {
         console.error("Failed to reject review:", data.error);
-        alert("Failed to reject review. Please try again.");
+        toast.error("Failed to reject review. Please try again.");
       }
     } catch (error) {
       console.error("Failed to reject review:", error);
-      alert("Failed to reject review. Please try again.");
+      toast.error("Failed to reject review. Please try again.");
     }
   };
 
@@ -151,84 +197,123 @@ export default function ManagerDashboard() {
             r.id === reviewId ? { ...r, isPublic: !r.isPublic } : r
           )
         );
+        toast.success(
+          `Review ${
+            !review.isPublic ? "made public" : "made private"
+          } successfully!`
+        );
       } else {
         console.error("Failed to toggle public status:", data.error);
-        alert("Failed to update review status. Please try again.");
+        toast.error("Failed to update review status. Please try again.");
       }
     } catch (error) {
       console.error("Failed to toggle public status:", error);
-      alert("Failed to update review status. Please try again.");
+      toast.error("Failed to update review status. Please try again.");
     }
   };
 
   const handleImportGoogleReviews = async () => {
     setGoogleImportLoading(true);
-    try {
-      // Get all unique properties from current reviews
-      const properties = Array.from(
-        new Set(
-          reviews.map((r) => ({
-            name: r.propertyName,
-            id: r.propertyId,
-          }))
-        )
-      );
+    const importPromise = new Promise(async (resolve, reject) => {
+      try {
+        // Get all unique properties from current reviews
+        const properties = Array.from(
+          new Set(
+            reviews.map((r) => ({
+              name: r.propertyName,
+              id: r.propertyId,
+            }))
+          )
+        );
 
-      let importedCount = 0;
+        let importedCount = 0;
 
-      for (const property of properties) {
-        try {
-          const response = await fetch(
-            `/api/reviews/google?property=${encodeURIComponent(
-              property.name
-            )}&address=London, UK`
-          );
-          const data = await response.json();
+        for (const property of properties) {
+          try {
+            const response = await fetch(
+              `/api/reviews/google?property=${encodeURIComponent(
+                property.name
+              )}&address=London, UK`
+            );
+            const data = await response.json();
 
-          if (data.success && data.data.reviews.length > 0) {
-            // Here you would typically save these to your database
-            // For now, we'll just count them
-            importedCount += data.data.reviews.length;
+            if (data.success && data.data.reviews.length > 0) {
+              importedCount += data.data.reviews.length;
+            }
+          } catch (error) {
+            console.warn(
+              `Failed to import Google reviews for ${property.name}:`,
+              error
+            );
           }
-        } catch (error) {
-          console.warn(
-            `Failed to import Google reviews for ${property.name}:`,
-            error
-          );
         }
-      }
 
-      if (importedCount > 0) {
-        alert(
-          `Successfully imported ${importedCount} Google reviews! Visit the Google Reviews page to see them.`
-        );
-      } else {
-        alert(
-          "No Google reviews found for your properties. Try the Google Reviews page to search manually."
-        );
+        if (importedCount > 0) {
+          resolve(`Successfully imported ${importedCount} Google reviews!`);
+        } else {
+          reject(new Error("No Google reviews found for your properties."));
+        }
+      } catch (error) {
+        reject(error);
+      } finally {
+        setGoogleImportLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to import Google reviews:", error);
-      alert("Failed to import Google reviews. Please try again.");
-    } finally {
-      setGoogleImportLoading(false);
-    }
+    });
+
+    toast.promise(importPromise, {
+      loading: "Importing Google reviews...",
+      success: (message) => message as string,
+      error: (err) =>
+        err.message || "Failed to import Google reviews. Please try again.",
+    });
   };
 
   const filteredReviews = reviews.filter((review) => {
+    // Search query filtering
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      return (
-        review.guestName.toLowerCase().includes(query) ||
-        review.propertyName.toLowerCase().includes(query) ||
-        review.comment.toLowerCase().includes(query)
-      );
+      const matchesSearch =
+        review.guestName?.toLowerCase().includes(query) ||
+        review.propertyName?.toLowerCase().includes(query) ||
+        review.comment?.toLowerCase().includes(query);
+
+      if (!matchesSearch) return false;
     }
+
     return true;
   });
 
+  // Generate unique properties from all reviews (not just filtered ones)
+  const [allReviews, setAllReviews] = useState<NormalizedReview[]>([]);
+
+  useEffect(() => {
+    // Fetch all reviews for dropdown options
+    const fetchAllReviews = async () => {
+      try {
+        const response = await fetch("/api/reviews/manage");
+        const data = await response.json();
+
+        if (data.success) {
+          let reviewsList = [];
+          if (data.reviews) {
+            reviewsList = data.reviews;
+          } else if (data.data && Array.isArray(data.data)) {
+            reviewsList = data.data;
+          } else if (data.data && data.data.reviews) {
+            reviewsList = data.data.reviews;
+          }
+          setAllReviews(reviewsList);
+        }
+      } catch (error) {
+        console.error("Failed to fetch all reviews for filters:", error);
+      }
+    };
+
+    fetchAllReviews();
+  }, []);
+
   const uniqueProperties = Array.from(
-    new Set(reviews.map((r) => r.propertyName))
+    new Set(allReviews.map((r) => r.propertyName).filter(Boolean))
   );
 
   if (loading) {
@@ -362,12 +447,6 @@ export default function ManagerDashboard() {
                   Import Google Reviews
                 </>
               )}
-            </button>
-
-            {/* Export */}
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-              <Download className="w-4 h-4" />
-              Export
             </button>
           </div>
 

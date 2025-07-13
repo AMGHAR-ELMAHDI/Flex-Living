@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import {
   Star,
   MapPin,
@@ -13,7 +14,6 @@ import {
   ArrowLeft,
   Loader2,
   Calendar,
-  User,
   Languages,
 } from "lucide-react";
 import Link from "next/link";
@@ -209,10 +209,15 @@ export default function PlaceDetailsPage() {
             {/* Main Photo */}
             {place.photos && place.photos.length > 0 && (
               <div className="lg:col-span-1">
-                <img
+                <Image
                   src={getPhotoUrl(place.photos[0].reference, 600)}
                   alt={place.name}
+                  width={600}
+                  height={400}
                   className="w-full h-64 object-cover rounded-lg"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
                 />
               </div>
             )}
@@ -324,6 +329,25 @@ export default function PlaceDetailsPage() {
           </div>
         </div>
 
+        {/* Place Photos */}
+        {place.photos && place.photos.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {place.photos.slice(0, 4).map((photo, index) => (
+              <div key={index} className="aspect-w-16 aspect-h-10 relative">
+                <Image
+                  src={getPhotoUrl(photo.reference, 400)}
+                  alt={`${place.name} photo ${index + 1}`}
+                  fill
+                  className="object-cover rounded-lg"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Opening Hours */}
         {place.openingHours && (
           <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
@@ -341,62 +365,50 @@ export default function PlaceDetailsPage() {
           </div>
         )}
 
-        {/* Reviews */}
+        {/* Reviews with profile photos */}
         {place.reviews && place.reviews.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Reviews ({place.reviews.length})
-            </h2>
-
-            <div className="space-y-6">
-              {place.reviews.map((review) => (
-                <div
-                  key={review.id}
-                  className="border-b border-gray-100 last:border-b-0 pb-6 last:pb-0"
-                >
-                  <div className="flex items-start gap-4">
-                    {review.profilePhotoUrl ? (
-                      <img
+          <div className="space-y-4">
+            {place.reviews.map((review) => (
+              <div key={review.id} className="bg-white rounded-lg border p-4">
+                <div className="flex items-start gap-3">
+                  {review.profilePhotoUrl && (
+                    <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                      <Image
                         src={review.profilePhotoUrl}
                         alt={review.author}
-                        className="w-10 h-10 rounded-full"
+                        fill
+                        className="object-cover"
                       />
-                    ) : (
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <User className="h-5 w-5 text-gray-400" />
-                      </div>
-                    )}
-
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium text-gray-900">
-                          {review.author}
-                        </h3>
-                        {review.language !== "en" && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Languages className="h-3 w-3 mr-1" />
-                            {review.language}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 mb-3">
-                        {renderStars(review.rating)}
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Calendar className="h-3 w-3" />
-                          {review.timeDescription}
-                        </div>
-                      </div>
-
-                      <p className="text-gray-700 leading-relaxed">
-                        {review.text}
-                      </p>
                     </div>
+                  )}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-medium text-gray-900">
+                        {review.author}
+                      </h3>
+                      {review.language !== "en" && (
+                        <Badge variant="secondary" className="text-xs">
+                          <Languages className="h-3 w-3 mr-1" />
+                          {review.language}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 mb-3">
+                      {renderStars(review.rating)}
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Calendar className="h-3 w-3" />
+                        {review.timeDescription}
+                      </div>
+                    </div>
+
+                    <p className="text-gray-700 leading-relaxed">
+                      {review.text}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
