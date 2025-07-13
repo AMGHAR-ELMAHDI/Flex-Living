@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Building2, BarChart3, Settings, User } from "lucide-react";
+import {
+  Building2,
+  BarChart3,
+  Settings,
+  User,
+  Star,
+  MapPin,
+} from "lucide-react";
 
 export function Navigation() {
   return (
@@ -30,15 +37,21 @@ export function Navigation() {
               Properties
             </Link>
 
-            <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
+            <Link
+              href="/google-reviews"
+              className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <Star className="w-4 h-4" />
+              Google Reviews
+            </Link>
 
-            <button className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors">
-              <User className="w-4 h-4" />
-              Profile
-            </button>
+            <Link
+              href="/places"
+              className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              <MapPin className="w-4 h-4" />
+              Places Search
+            </Link>
           </div>
 
           {/* Mobile menu button */}

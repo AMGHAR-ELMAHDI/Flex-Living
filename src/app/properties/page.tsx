@@ -5,67 +5,43 @@ import Link from "next/link";
 import { NormalizedReview } from "@/types/reviews";
 import { StarRating } from "@/components/ui/StarRating";
 import { Badge } from "@/components/ui/Badge";
-import { MapPin, Users, Star, Eye, Calendar, BarChart3 } from "lucide-react";
+import { getAllProperties, Property } from "@/lib/propertiesData";
+import {
+  MapPin,
+  Star,
+  Eye,
+  BarChart3,
+  ExternalLink,
+  Search,
+  Loader2,
+} from "lucide-react";
 
-// Mock properties data
-const mockProperties = [
-  {
-    id: "2b_n1_a",
-    name: "2B N1 A - 29 Shoreditch Heights",
-    address: "29 Shoreditch High Street, London E1 6PN",
-    image:
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=300&auto=format&fit=crop",
-    maxGuests: 4,
-    bedrooms: 2,
-    pricePerNight: 180,
-  },
-  {
-    id: "1b_s2_b",
-    name: "1B S2 B - 15 Canary Wharf Luxury",
-    address: "15 South Quay, London E14 9SH",
-    image:
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=300&auto=format&fit=crop",
-    maxGuests: 2,
-    bedrooms: 1,
-    pricePerNight: 220,
-  },
-  {
-    id: "3b_w1_c",
-    name: "3B W1 C - 42 Notting Hill Garden",
-    address: "42 Ladbroke Grove, London W11 2PB",
-    image:
-      "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&h=300&auto=format&fit=crop",
-    maxGuests: 6,
-    bedrooms: 3,
-    pricePerNight: 320,
-  },
-  {
-    id: "2b_ec1_d",
-    name: "2B EC1 D - 8 City Financial District",
-    address: "8 Moorgate, London EC2R 6EA",
-    image:
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=400&h=300&auto=format&fit=crop",
-    maxGuests: 4,
-    bedrooms: 2,
-    pricePerNight: 280,
-  },
-  {
-    id: "1b_e2_e",
-    name: "1B E2 E - 23 Brick Lane Modern",
-    address: "23 Brick Lane, London E1 6QL",
-    image:
-      "https://images.unsplash.com/photo-1560185127-6ed189bf02f4?w=400&h=300&auto=format&fit=crop",
-    maxGuests: 2,
-    bedrooms: 1,
-    pricePerNight: 150,
-  },
-];
+interface GooglePlaceInfo {
+  placeId?: string;
+  name?: string;
+  rating?: number;
+  reviewCount?: number;
+  photos?: string[];
+  types?: string[];
+  priceLevel?: number;
+  openNow?: boolean;
+}
+
+interface ExtendedProperty extends Property {
+  googlePlace?: GooglePlaceInfo;
+  isSearchingPlace?: boolean;
+}
 
 export default function PropertiesPage() {
   const [reviews, setReviews] = useState<NormalizedReview[]>([]);
+  const [properties, setProperties] = useState<ExtendedProperty[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Load properties from centralized data
+    const propertiesData = getAllProperties();
+    setProperties(propertiesData);
+
     fetchReviews();
   }, []);
 
@@ -82,6 +58,65 @@ export default function PropertiesPage() {
       console.error("Failed to fetch reviews:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const searchGooglePlace = async (property: ExtendedProperty) => {
+    try {
+      // Update state to show loading
+      setProperties((prev) =>
+        prev.map((p) =>
+          p.id === property.id ? { ...p, isSearchingPlace: true } : p
+        )
+      );
+
+      const response = await fetch(
+        `/api/places/search?query=${encodeURIComponent(
+          property.searchQuery
+        )}&type=lodging`
+      );
+      const data = await response.json();
+
+      if (data.success && data.data.places.length > 0) {
+        const place = data.data.places[0]; // Take the first result
+        const googlePlace: GooglePlaceInfo = {
+          placeId: place.id,
+          name: place.name,
+          rating: place.rating,
+          reviewCount: place.reviewCount,
+          photos:
+            place.photos?.map(
+              (photo: any) =>
+                `/api/places/photo?reference=${photo.reference}&maxwidth=300`
+            ) || [],
+          types: place.types,
+          priceLevel: place.priceLevel,
+          openNow: place.isOpen,
+        };
+
+        // Update the property with Google Place data
+        setProperties((prev) =>
+          prev.map((p) =>
+            p.id === property.id
+              ? { ...p, googlePlace, isSearchingPlace: false }
+              : p
+          )
+        );
+      } else {
+        // No place found
+        setProperties((prev) =>
+          prev.map((p) =>
+            p.id === property.id ? { ...p, isSearchingPlace: false } : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to search Google Place:", error);
+      setProperties((prev) =>
+        prev.map((p) =>
+          p.id === property.id ? { ...p, isSearchingPlace: false } : p
+        )
+      );
     }
   };
 
@@ -109,10 +144,26 @@ export default function PropertiesPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
-            <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
-            <p className="text-gray-600 mt-1">
-              View and manage all Flex Living properties
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Properties</h1>
+                <p className="text-gray-600 mt-1">
+                  View and manage all Flex Living properties with Google Places
+                  integration
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-sm">
+                  <div className="flex items-center gap-2 text-green-600">
+                    <MapPin className="w-4 h-4" />
+                    <span>Google Places Available</span>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Click the search icon to find location data
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -125,7 +176,7 @@ export default function PropertiesPage() {
               <div>
                 <p className="text-sm text-gray-600">Total Properties</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {mockProperties.length}
+                  {properties.length}
                 </p>
               </div>
               <BarChart3 className="w-8 h-8 text-blue-600" />
@@ -176,7 +227,7 @@ export default function PropertiesPage() {
 
         {/* Properties Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {mockProperties.map((property) => {
+          {properties.map((property) => {
             const stats = getPropertyStats(property.id);
 
             return (
@@ -185,24 +236,110 @@ export default function PropertiesPage() {
                 className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
               >
                 {/* Property Image */}
-                <div className="aspect-w-16 aspect-h-10">
+                <div className="aspect-w-16 aspect-h-10 relative">
                   <img
-                    src={property.image}
+                    src={
+                      property.googlePlace?.photos?.[0] || property.images[0]
+                    }
                     alt={property.name}
                     className="w-full h-48 object-cover"
                   />
+                  {/* Google Places indicator */}
+                  {property.googlePlace && (
+                    <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      Google
+                    </div>
+                  )}
                 </div>
 
                 {/* Property Info */}
                 <div className="p-6">
                   <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {property.name}
-                    </h3>
-                    <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
-                      <MapPin className="w-3 h-3" />
-                      <span>{property.address}</span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          {property.name}
+                        </h3>
+                        <div className="flex items-center gap-1 text-sm text-gray-600 mb-2">
+                          <MapPin className="w-3 h-3" />
+                          <span>{property.address}</span>
+                        </div>
+                      </div>
+                      {!property.googlePlace && !property.isSearchingPlace && (
+                        <button
+                          onClick={() => searchGooglePlace(property)}
+                          className="ml-2 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Find on Google Places"
+                        >
+                          <Search className="w-4 h-4" />
+                        </button>
+                      )}
+                      {property.isSearchingPlace && (
+                        <div className="ml-2 p-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        </div>
+                      )}
                     </div>
+
+                    {/* Google Places info */}
+                    {property.googlePlace && (
+                      <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-green-800">
+                            Google Places Match
+                          </span>
+                          {property.googlePlace.placeId && (
+                            <Link
+                              href={`/places/${property.googlePlace.placeId}`}
+                              className="text-xs text-green-600 hover:text-green-800 flex items-center gap-1"
+                            >
+                              View Details
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          )}
+                        </div>
+                        <div className="text-sm text-green-700">
+                          {property.googlePlace.name && (
+                            <p className="font-medium">
+                              {property.googlePlace.name}
+                            </p>
+                          )}
+                          {property.googlePlace.rating && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                <span>
+                                  {property.googlePlace.rating.toFixed(1)}
+                                </span>
+                              </div>
+                              {property.googlePlace.reviewCount && (
+                                <span className="text-xs">
+                                  ({property.googlePlace.reviewCount} Google
+                                  reviews)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {property.googlePlace.types &&
+                            property.googlePlace.types.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {property.googlePlace.types
+                                  .slice(0, 2)
+                                  .map((type) => (
+                                    <Badge
+                                      key={type}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {type.replace(/_/g, " ")}
+                                    </Badge>
+                                  ))}
+                              </div>
+                            )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Property Details */}
@@ -221,8 +358,11 @@ export default function PropertiesPage() {
                     </div>
                   </div>
 
-                  {/* Review Stats */}
+                  {/* Review Stats - Hostaway Only */}
                   <div className="border-t border-gray-100 pt-4 mb-4">
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">
+                      Hostaway Reviews
+                    </h4>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         {stats.averageRating > 0 ? (

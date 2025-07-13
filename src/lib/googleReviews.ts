@@ -9,50 +9,112 @@ import {
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || "";
 const GOOGLE_PLACES_BASE_URL = "https://maps.googleapis.com/maps/api/place";
 
+// In-memory cache for API responses (use Redis in production)
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 export class GoogleReviewsService {
   private static async makeRequest(url: string): Promise<any> {
     if (!GOOGLE_PLACES_API_KEY) {
       throw new Error("Google Places API key not configured");
     }
 
+    // Check cache first
+    const cacheKey = url;
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log("Returning cached Google Places API response");
+      return cached.data;
+    }
+
     try {
       const response = await fetch(url);
 
       if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error(
+            "Google Places API quota exceeded. Please try again later."
+          );
+        }
+        if (response.status === 403) {
+          throw new Error(
+            "Google Places API access forbidden. Check your API key and permissions."
+          );
+        }
         throw new Error(
           `Google Places API error: ${response.status} ${response.statusText}`
         );
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      // Handle API-level errors
+      if (data.status === "OVER_QUERY_LIMIT") {
+        throw new Error(
+          "Google Places API quota exceeded. Please try again later."
+        );
+      }
+      if (data.status === "REQUEST_DENIED") {
+        throw new Error(
+          "Google Places API access denied. Check your API key configuration."
+        );
+      }
+      if (data.status === "INVALID_REQUEST") {
+        throw new Error(
+          "Invalid request to Google Places API. Please check your parameters."
+        );
+      }
+
+      // Cache successful responses
+      cache.set(cacheKey, { data, timestamp: Date.now() });
+
+      return data;
     } catch (error) {
       console.error("Google Places API request failed:", error);
       throw error;
     }
   }
 
-  // Find place by name and location
+  // Enhanced property matching with multiple search strategies
   static async findPlace(
     query: string,
     location?: string
-  ): Promise<string | null> {
-    const searchQuery = location ? `${query} ${location}` : query;
-    const url = `${GOOGLE_PLACES_BASE_URL}/findplacefromtext/json?input=${encodeURIComponent(
-      searchQuery
-    )}&inputtype=textquery&fields=place_id&key=${GOOGLE_PLACES_API_KEY}`;
+  ): Promise<{ placeId: string; name: string; address?: string } | null> {
+    const searchStrategies = [
+      // Strategy 1: Exact query with location
+      location ? `${query} ${location}` : null,
+      // Strategy 2: Query only
+      query,
+      // Strategy 3: If query looks like a property code, try common property types
+      query.includes("B ") ? `${query} apartment London` : null,
+      query.includes("B ") ? `${query} hotel London` : null,
+    ].filter(Boolean);
 
-    try {
-      const response = await this.makeRequest(url);
+    for (const searchQuery of searchStrategies) {
+      if (!searchQuery) continue;
 
-      if (response.status === "OK" && response.candidates.length > 0) {
-        return response.candidates[0].place_id;
+      try {
+        const url = `${GOOGLE_PLACES_BASE_URL}/findplacefromtext/json?input=${encodeURIComponent(
+          searchQuery
+        )}&inputtype=textquery&fields=place_id,name,formatted_address&key=${GOOGLE_PLACES_API_KEY}`;
+
+        const response = await this.makeRequest(url);
+
+        if (response.status === "OK" && response.candidates.length > 0) {
+          const candidate = response.candidates[0];
+          return {
+            placeId: candidate.place_id,
+            name: candidate.name || query,
+            address: candidate.formatted_address,
+          };
+        }
+      } catch (error) {
+        console.warn(`Search strategy failed for "${searchQuery}":`, error);
+        continue;
       }
-
-      return null;
-    } catch (error) {
-      console.error("Failed to find place:", error);
-      return null;
     }
+
+    return null;
   }
 
   // Get place details including reviews
@@ -81,14 +143,14 @@ export class GoogleReviewsService {
     propertyAddress?: string
   ): Promise<NormalizedReview[]> {
     try {
-      const placeId = await this.findPlace(propertyName, propertyAddress);
+      const placeResult = await this.findPlace(propertyName, propertyAddress);
 
-      if (!placeId) {
+      if (!placeResult) {
         console.log(`No Google Place found for: ${propertyName}`);
         return [];
       }
 
-      const placeDetails = await this.getPlaceDetails(placeId);
+      const placeDetails = await this.getPlaceDetails(placeResult.placeId);
 
       if (!placeDetails || !placeDetails.reviews) {
         console.log(`No reviews found for place: ${propertyName}`);
@@ -97,8 +159,8 @@ export class GoogleReviewsService {
 
       return this.normalizeGoogleReviews(
         placeDetails.reviews,
-        propertyName,
-        placeId
+        placeResult.name || propertyName,
+        placeResult.placeId
       );
     } catch (error) {
       console.error(`Failed to get Google reviews for ${propertyName}:`, error);
